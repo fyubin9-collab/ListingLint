@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "example-store-us-v1",
+  "name": "示例店铺美国站规则",
+  "version": "1.0.0",
+  "description": "示例自定义规则，仅用于演示 JSON 扩展能力。",
+  "fieldAliases": {
+    "sku": ["Merchant SKU", "商家 SKU"],
+    "title": ["Listing Title", "英文标题"],
+    "price": ["Retail Price"],
+    "currency": ["Currency"],
+    "stock": ["Available Quantity"],
+    "brand": ["Brand Name"],
+    "category": ["Product Category"]
+  },
+  "rules": [
+    { "id": "sku.required", "type": "required", "field": "sku", "severity": "error" },
+    { "id": "sku.unique", "type": "unique", "field": "sku", "severity": "error", "caseSensitive": false },
+    { "id": "title.required", "type": "required", "field": "title", "severity": "error" },
+    { "id": "title.length", "type": "length", "field": "title", "severity": "error", "min": 20, "max": 160 },
+    {
+      "id": "title.claims",
+      "type": "forbiddenTerms",
+      "fields": ["title"],
+      "terms": ["100% guaranteed", "best seller"],
+      "severity": "warning",
+      "caseSensitive": false
+    },
+    { "id": "price.positive", "type": "number", "field": "price", "severity": "error", "min": 0.01 },
+    { "id": "currency.usd", "type": "enum", "field": "currency", "severity": "error", "values": ["USD"] },
+    { "id": "stock.integer", "type": "number", "field": "stock", "severity": "error", "min": 0, "integer": true },
+    {
+      "id": "images.square",
+      "type": "image",
+      "severity": "error",
+      "minCount": 1,
+      "allowedExtensions": ["jpg", "jpeg", "png", "webp"],
+      "maxBytes": 10485760,
+      "minWidth": 1200,
+      "minHeight": 1200
+    }
+  ]
+}

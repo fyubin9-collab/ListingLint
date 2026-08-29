@@ -1,0 +1,39 @@
+name: Bug report
+description: 报告可复现的解析、质检、导出或界面问题
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: 请勿上传包含真实客户、供应商或未公开商品数据的文件。
+  - type: input
+    id: version
+    attributes:
+      label: ListingLint 版本
+      placeholder: v0.1.0
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 使用脱敏或最小样例说明上传内容和操作顺序。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期结果
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: 浏览器与操作系统
+      placeholder: Chrome 138 / Windows 11

@@ -1,0 +1,32 @@
+name: Rule pack proposal
+description: 提议新的规则、字段别名或规则包
+title: "[Rule] "
+labels: [rule-pack]
+body:
+  - type: input
+    id: scenario
+    attributes:
+      label: 使用场景
+      placeholder: 独立站美国市场服饰商品表
+    validations:
+      required: true
+  - type: textarea
+    id: rule
+    attributes:
+      label: 规则定义
+      description: 说明字段、条件、严重级别、错误文案和修改建议。
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 资料与适用范围
+      description: 如果声称来自平台，请提供官方公开链接、站点和资料日期。
+    validations:
+      required: true
+  - type: textarea
+    id: fixtures
+    attributes:
+      label: 通过与失败样例
+    validations:
+      required: true
