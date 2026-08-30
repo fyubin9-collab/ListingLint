@@ -9,12 +9,12 @@ import { CANONICAL_FIELDS } from './types'
 
 export const FIELD_LABELS: Record<CanonicalField, string> = {
   sku: 'SKU',
-  title: 'Title 商品标题',
-  price: 'Price 价格',
-  currency: 'Currency 币种',
-  stock: 'Stock 库存',
-  brand: 'Brand 品牌',
-  category: 'Category 类目'
+  title: '商品标题（Title）',
+  price: '价格（Price）',
+  currency: '币种（Currency）',
+  stock: '库存（Stock）',
+  brand: '品牌（Brand）',
+  category: '类目（Category）'
 }
 
 function normalizeHeader(value: string): string {

@@ -3,9 +3,9 @@ interface WorkflowRailProps {
 }
 
 const steps = [
-  { number: '01', label: '装入商品资料', hint: 'CSV / XLSX + ZIP' },
-  { number: '02', label: '确认字段与规则', hint: '不猜测源表含义' },
-  { number: '03', label: '定位上架问题', hint: '报告不修改原表' }
+  { number: '01', label: '选择商品资料', hint: 'CSV / XLSX，可选图片 ZIP' },
+  { number: '02', label: '确认字段与规则', hint: '核对自动映射结果' },
+  { number: '03', label: '检查并导出', hint: '定位问题，不修改源表' }
 ]
 
 export function WorkflowRail({ stage }: WorkflowRailProps) {

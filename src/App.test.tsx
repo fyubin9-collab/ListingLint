@@ -5,7 +5,7 @@ import App from './App'
 describe('App', () => {
   it('renders the product promise and local-processing boundary', () => {
     render(<App />)
-    expect(screen.getByRole('heading', { name: '问题不该藏在第 847 行。' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '上架前，把每个问题定位到具体行。' })).toBeInTheDocument()
     expect(screen.getByText('浏览器本地处理')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '下载 XLSX 工作模板' })).toHaveAttribute(
       'href',
@@ -25,7 +25,7 @@ describe('App', () => {
 
     expect(screen.getByRole('heading', { name: '先处理阻止上架的问题' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '下载规则示例' })).toBeInTheDocument()
-    expect(screen.getByText(/NEEDS REVISION/)).toBeInTheDocument()
+    expect(screen.getByText('需要修改')).toBeInTheDocument()
     expect(screen.getAllByText('BOTTLE-001').length).toBeGreaterThan(0)
 
     const filters = screen.getByRole('group', { name: '筛选问题级别' })

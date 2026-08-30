@@ -53,11 +53,11 @@ export function ResultsPanel({ issues, productCount, onLocate, onExport, exporti
 
       <div className="inspection-tape" role="status">
         <span className={errors > 0 ? 'inspection-tape__verdict inspection-tape__verdict--error' : 'inspection-tape__verdict inspection-tape__verdict--pass'}>
-          {errors > 0 ? 'NEEDS REVISION / 需要修改' : 'READY FOR REVIEW / 可人工复核'}
+          {errors > 0 ? '需要修改' : '可以人工复核'}
         </span>
-        <span>Errors <strong>{errors}</strong></span>
-        <span>Warnings <strong>{warnings}</strong></span>
-        <span>Checked <strong>{productCount}</strong></span>
+        <span>错误 <strong>{errors}</strong></span>
+        <span>警告 <strong>{warnings}</strong></span>
+        <span>已检查 <strong>{productCount}</strong></span>
       </div>
 
       <div className="result-tools">

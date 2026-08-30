@@ -10,11 +10,11 @@ test('built-in demo supports filtering, locating and Excel export', async ({ pag
 
   await page.goto('/')
   await page.evaluate(async () => { await document.fonts.ready })
-  await expect(page.getByRole('heading', { name: /问题不该藏在\s*第 847 行。/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /上架前，把每个问题\s*定位到具体行。/ })).toBeVisible()
   await page.getByRole('button', { name: '直接体验有问题的示例' }).click()
 
   await expect(page.getByRole('heading', { name: '先处理阻止上架的问题' })).toBeVisible()
-  await expect(page.getByText(/NEEDS REVISION/)).toBeVisible()
+  await expect(page.getByText('需要修改', { exact: true })).toBeVisible()
   await expect(page.getByRole('table', { name: '质检问题明细' })).toContainText('BOTTLE-001')
 
   await page.getByRole('group', { name: '筛选问题级别' }).getByRole('button', { name: /^警告/ }).click()
@@ -69,7 +69,7 @@ test('work template is downloadable, re-uploadable and the app is installable', 
 
   await page.context().setOffline(true)
   await page.reload()
-  await expect(page.getByRole('heading', { name: /问题不该藏在\s*第 847 行。/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /上架前，把每个问题\s*定位到具体行。/ })).toBeVisible()
   await page.context().setOffline(false)
 })
 

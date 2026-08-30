@@ -241,7 +241,7 @@ export default function App() {
           <span className="brand-mark" aria-hidden="true"><i /><i /><i /><i /></span>
           <span>
             <strong>ListingLint</strong>
-            <small>Listing quality inspection</small>
+            <small>电商商品上架质检</small>
           </span>
         </a>
         <div className="local-badge">
@@ -252,11 +252,17 @@ export default function App() {
 
       <main id="top">
         <section className="hero" aria-labelledby="hero-title">
-          <div className="hero-label">PRE-PUBLISH INSPECTION / 上架前质检</div>
-          <h1 id="hero-title">问题不该藏在<br /><span>第 847 行。</span></h1>
+          <div>
+            <div className="hero-label">商品上架质检工作台</div>
+            <h1 id="hero-title">上架前，把每个问题<br /><span>定位到具体行。</span></h1>
+          </div>
           <div className="hero-copy">
-            <p>上传商品表和图片包，ListingLint 把缺字段、重复 SKU、错误价格和图片规格问题钉回源表位置。</p>
-            <div className="privacy-line"><span>01</span> 不上传文件 <span>02</span> 不修改原表 <span>03</span> 结果可复核</div>
+            <p>选择本地商品表和图片包，检查字段、SKU、价格、库存与图片规格，并生成可定位的问题报告。</p>
+            <ul className="privacy-line" aria-label="数据处理说明">
+              <li>仅在浏览器处理</li>
+              <li>不修改源表</li>
+              <li>报告可复核</li>
+            </ul>
           </div>
         </section>
 
@@ -308,8 +314,8 @@ export default function App() {
             <div className="sheet-toolbar">
               <div>
                 <span className="sheet-status-light" aria-hidden="true" />
-                <strong>{workbook?.fileName ?? 'NO FILE LOADED'}</strong>
-                {activeSheet && <small>{activeSheet.name} / {activeSheet.rows.length.toLocaleString()} ROWS</small>}
+                <strong>{workbook?.fileName ?? '尚未选择文件'}</strong>
+                {activeSheet && <small>{activeSheet.name} / {activeSheet.rows.length.toLocaleString()} 行</small>}
               </div>
               <div className="sheet-legend">
                 <span><i className="legend-dot legend-dot--error" />错误</span>
@@ -338,18 +344,17 @@ export default function App() {
         )}
 
         <section className="privacy-note" aria-labelledby="privacy-heading">
-          <span className="privacy-note__stamp">LOCAL<br />ONLY</span>
           <div>
-            <div className="section-kicker">数据边界</div>
-            <h2 id="privacy-heading">你的商品资料不会离开这个标签页。</h2>
-            <p>ListingLint 是静态浏览器应用。商品表、图片和报告只存在于当前内存；刷新页面即清空，也不包含账号、遥测或远程图片抓取。</p>
+            <div className="section-kicker">隐私与数据</div>
+            <h2 id="privacy-heading">文件只在当前浏览器中处理</h2>
+            <p>商品表、图片和报告不会上传或持久化；刷新页面即清空。请在关闭页面前下载需要保留的报告。</p>
           </div>
         </section>
       </main>
 
       <footer className="site-footer">
-        <span>ListingLint v0.1.1 · MIT License</span>
-        <span>Deterministic checks, reviewable results.</span>
+        <span>ListingLint v0.1.2 · MIT License</span>
+        <span>确定性规则 · 结果可复核</span>
       </footer>
     </div>
   )

@@ -28,8 +28,8 @@ export function UploadPanel({
   return (
     <section className="control-section" aria-labelledby="source-heading">
       <div className="section-kicker">01 / 商品资料</div>
-      <h2 id="source-heading">装入待检查文件</h2>
-      <p className="section-copy">支持 UTF-8 CSV、XLSX，以及按 SKU 命名的可选图片 ZIP。</p>
+      <h2 id="source-heading">选择待检查文件</h2>
+      <p className="section-copy">商品表必选；按 SKU 命名的图片 ZIP 可选。</p>
 
       <div className="file-actions">
         <label className="file-button file-button--primary" htmlFor="table-file">

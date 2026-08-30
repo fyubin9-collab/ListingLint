@@ -37,8 +37,8 @@ export function MappingPanel({
   return (
     <section className={`control-section ${disabled ? 'control-section--disabled' : ''}`} aria-labelledby="mapping-heading">
       <div className="section-kicker">02 / 字段与规则</div>
-      <h2 id="mapping-heading">确认系统读懂了哪一列</h2>
-      <p className="section-copy">自动识别只给建议。你确认后，质检才会使用这些字段。</p>
+      <h2 id="mapping-heading">确认字段映射</h2>
+      <p className="section-copy">系统会自动匹配常见列名；请核对后再运行质检。</p>
 
       <div className="mapping-grid">
         {CANONICAL_FIELDS.map((field) => (
