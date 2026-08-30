@@ -7,6 +7,10 @@ describe('App', () => {
     render(<App />)
     expect(screen.getByRole('heading', { name: '问题不该藏在第 847 行。' })).toBeInTheDocument()
     expect(screen.getByText('浏览器本地处理')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '下载 XLSX 工作模板' })).toHaveAttribute(
+      'href',
+      '/listinglint-work-template.xlsx'
+    )
   })
 
   it('loads the built-in demo, exposes deterministic issues and filters warnings', async () => {

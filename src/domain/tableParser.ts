@@ -1,4 +1,4 @@
-import ExcelJS from 'exceljs'
+import JSZip from 'jszip'
 import Papa from 'papaparse'
 import type { CellValue, ParsedSheet, ParsedWorkbook, RawRow } from './types'
 
@@ -68,50 +68,146 @@ function parseCsv(buffer: ArrayBuffer, fileName: string): ParsedWorkbook {
   return { fileName, sheets: [{ name: 'CSV', headers, rows: nonEmptyRows }] }
 }
 
-function excelCellValue(cell: ExcelJS.Cell): CellValue {
-  const value = cell.value
-  if (value === null || value === undefined) return null
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value
-  if (value instanceof Date) return value.toISOString().slice(0, 10)
-  if (typeof value === 'object' && 'result' in value) {
-    const result = value.result
-    if (result === null || result === undefined) return cell.text || null
-    if (typeof result === 'string' || typeof result === 'number' || typeof result === 'boolean') return result
-  }
-  return cell.text || null
+function elementsByLocalName(parent: ParentNode, name: string): Element[] {
+  return Array.from(parent.querySelectorAll('*')).filter((element) => element.localName === name)
 }
 
-function parseWorksheet(worksheet: ExcelJS.Worksheet): ParsedSheet {
-  const columnCount = worksheet.actualColumnCount
-  const headerValues = Array.from({ length: columnCount }, (_, index) => worksheet.getCell(1, index + 1).text)
-  const headers = ensureHeaders(headerValues, worksheet.name)
+function directChildren(parent: Element, name: string): Element[] {
+  return Array.from(parent.children).filter((element) => element.localName === name)
+}
+
+function parseXml(xml: string): Document {
+  const document = new DOMParser().parseFromString(xml, 'application/xml')
+  if (elementsByLocalName(document, 'parsererror').length > 0) {
+    throw new Error('Invalid XML')
+  }
+  return document
+}
+
+function resolveArchivePath(basePath: string, target: string): string {
+  if (target.startsWith('/')) return target.slice(1)
+  const parts = [...basePath.split('/').slice(0, -1), ...target.split('/')]
+  const resolved: string[] = []
+  parts.forEach((part) => {
+    if (!part || part === '.') return
+    if (part === '..') resolved.pop()
+    else resolved.push(part)
+  })
+  return resolved.join('/')
+}
+
+function columnIndex(reference: string): number {
+  const letters = reference.match(/^[A-Z]+/i)?.[0].toUpperCase() ?? ''
+  return [...letters].reduce((total, letter) => total * 26 + letter.charCodeAt(0) - 64, 0)
+}
+
+function descendantText(parent: Element, name: string): string {
+  return elementsByLocalName(parent, name).map((element) => element.textContent ?? '').join('')
+}
+
+function readCell(cell: Element, sharedStrings: string[]): CellValue {
+  const type = cell.getAttribute('t')
+  const raw = directChildren(cell, 'v')[0]?.textContent ?? ''
+  if (type === 'inlineStr') return descendantText(cell, 't') || null
+  if (type === 's') return sharedStrings[Number(raw)] ?? null
+  if (type === 'b') return raw === '1'
+  if (type === 'str' || type === 'e' || type === 'd') return raw || null
+  if (raw === '') return null
+  const numeric = Number(raw)
+  return Number.isFinite(numeric) ? numeric : raw
+}
+
+function parseWorksheet(xml: string, sheetName: string, sharedStrings: string[]): ParsedSheet {
+  const document = parseXml(xml)
+  const rowElements = elementsByLocalName(document, 'row')
+  const rowsByNumber = new Map(
+    rowElements.map((row, index) => [Number(row.getAttribute('r')) || index + 1, row] as const)
+  )
+  const headerRow = rowsByNumber.get(1)
+  const headerCells = headerRow ? directChildren(headerRow, 'c') : []
+  const headerByColumn = new Map(
+    headerCells.map((cell) => [columnIndex(cell.getAttribute('r') ?? ''), readCell(cell, sharedStrings)] as const)
+  )
+  const columnCount = Math.max(0, ...Array.from(headerByColumn.keys()))
+  const headers = ensureHeaders(
+    Array.from({ length: columnCount }, (_, index) => String(headerByColumn.get(index + 1) ?? '')),
+    sheetName
+  )
   const rows: RawRow[] = []
 
-  for (let rowNumber = 2; rowNumber <= worksheet.actualRowCount; rowNumber += 1) {
+  rowsByNumber.forEach((rowElement, rowNumber) => {
+    if (rowNumber <= 1) return
+    const cellByColumn = new Map(
+      directChildren(rowElement, 'c').map((cell) => [
+        columnIndex(cell.getAttribute('r') ?? ''),
+        readCell(cell, sharedStrings)
+      ] as const)
+    )
     const values: Record<string, CellValue> = {}
     headers.forEach((header, index) => {
-      values[header] = excelCellValue(worksheet.getCell(rowNumber, index + 1))
+      values[header] = cellByColumn.get(index + 1) ?? null
     })
     const row = { sourceRow: rowNumber, values }
     if (!rowIsEmpty(row, headers)) rows.push(row)
-  }
+  })
 
   if (rows.length > MAX_TABLE_ROWS) {
-    throw new TableParseError(`工作表“${worksheet.name}”超过 ${MAX_TABLE_ROWS.toLocaleString()} 行上限。`)
+    throw new TableParseError(`工作表“${sheetName}”超过 ${MAX_TABLE_ROWS.toLocaleString()} 行上限。`)
   }
-  return { name: worksheet.name, headers, rows }
+  return { name: sheetName, headers, rows }
 }
 
 async function parseXlsx(buffer: ArrayBuffer, fileName: string): Promise<ParsedWorkbook> {
-  const workbook = new ExcelJS.Workbook()
   try {
-    await workbook.xlsx.load(buffer)
-  } catch {
+    const archive = await JSZip.loadAsync(buffer)
+    const workbookEntry = archive.file('xl/workbook.xml')
+    const relationshipsEntry = archive.file('xl/_rels/workbook.xml.rels')
+    if (!workbookEntry || !relationshipsEntry) throw new Error('Missing workbook metadata')
+
+    const workbookDocument = parseXml(await workbookEntry.async('string'))
+    const relationshipsDocument = parseXml(await relationshipsEntry.async('string'))
+    const relationships = new Map(
+      elementsByLocalName(relationshipsDocument, 'Relationship').map((relationship) => [
+        relationship.getAttribute('Id') ?? '',
+        relationship.getAttribute('Target') ?? ''
+      ] as const)
+    )
+    const sharedStringsEntry = archive.file('xl/sharedStrings.xml')
+    const sharedStrings = sharedStringsEntry
+      ? elementsByLocalName(parseXml(await sharedStringsEntry.async('string')), 'si').map((item) =>
+          descendantText(item, 't')
+        )
+      : []
+    const parsedSheets: ParsedSheet[] = []
+    let firstSheetError: TableParseError | null = null
+
+    for (const sheet of elementsByLocalName(workbookDocument, 'sheet')) {
+      const relationshipId = sheet.getAttribute('r:id') ?? sheet.getAttributeNS(
+        'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
+        'id'
+      )
+      const target = relationshipId ? relationships.get(relationshipId) : null
+      const sheetEntry = target ? archive.file(resolveArchivePath('xl/workbook.xml', target)) : null
+      if (!sheetEntry) continue
+      try {
+        parsedSheets.push(
+          parseWorksheet(await sheetEntry.async('string'), sheet.getAttribute('name') ?? '未命名工作表', sharedStrings)
+        )
+      } catch (error) {
+        if (error instanceof TableParseError && !firstSheetError) firstSheetError = error
+        else if (!(error instanceof TableParseError)) throw error
+      }
+    }
+
+    if (parsedSheets.length === 0) {
+      if (firstSheetError) throw firstSheetError
+      throw new TableParseError('XLSX 中没有可读取的工作表。')
+    }
+    return { fileName, sheets: parsedSheets }
+  } catch (error) {
+    if (error instanceof TableParseError) throw error
     throw new TableParseError('无法读取该 XLSX。文件可能已损坏、加密或不是有效的 Excel 工作簿。')
   }
-  const nonEmptyWorksheets = workbook.worksheets.filter((sheet) => sheet.actualRowCount > 0)
-  if (nonEmptyWorksheets.length === 0) throw new TableParseError('XLSX 中没有可读取的工作表。')
-  return { fileName, sheets: nonEmptyWorksheets.map(parseWorksheet) }
 }
 
 export async function parseTableFile(file: File): Promise<ParsedWorkbook> {

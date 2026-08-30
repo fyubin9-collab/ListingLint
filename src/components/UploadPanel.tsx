@@ -101,6 +101,13 @@ export function UploadPanel({
       </div>
 
       <div className="demo-actions">
+        <a
+          className="text-button"
+          href={`${import.meta.env.BASE_URL}listinglint-work-template.xlsx`}
+          download="listinglint-work-template.xlsx"
+        >
+          下载 XLSX 工作模板
+        </a>
         <button type="button" className="text-button" onClick={onLoadDemo} disabled={busy}>
           直接体验有问题的示例
         </button>

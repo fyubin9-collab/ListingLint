@@ -1,0 +1,25 @@
+{
+  "name": "ListingLint｜电商商品上架质检工具",
+  "short_name": "ListingLint",
+  "description": "在浏览器本地检查跨境电商商品表和图片，导出可定位的问题报告。",
+  "lang": "zh-CN",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#F7F8F2",
+  "theme_color": "#14213D",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
