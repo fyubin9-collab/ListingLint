@@ -24,6 +24,7 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: '直接体验有问题的示例' }))
 
     expect(screen.getByRole('heading', { name: '先处理阻止上架的问题' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '下载规则示例' })).toBeInTheDocument()
     expect(screen.getByText(/NEEDS REVISION/)).toBeInTheDocument()
     expect(screen.getAllByText('BOTTLE-001').length).toBeGreaterThan(0)
 

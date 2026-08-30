@@ -4,6 +4,7 @@ import { MappingPanel } from './components/MappingPanel'
 import { ResultsPanel } from './components/ResultsPanel'
 import { UploadPanel } from './components/UploadPanel'
 import { WorkflowRail } from './components/WorkflowRail'
+import customRulePackExample from '../examples/custom-rule-pack.json'
 import { demoCsv, demoImages, demoWorkbook } from './data/demo'
 import { genericRulePack } from './data/genericRulePack'
 import { runLint } from './domain/lintEngine'
@@ -196,6 +197,18 @@ export default function App() {
     URL.revokeObjectURL(url)
   }
 
+  const downloadRuleExample = () => {
+    const blob = new Blob([JSON.stringify(customRulePackExample, null, 2)], {
+      type: 'application/json;charset=utf-8'
+    })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = 'listinglint-rule-pack.example.json'
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+
   const exportReport = async () => {
     if (!workbook || issues === null) return
     setExporting(true)
@@ -279,6 +292,7 @@ export default function App() {
               disabled={!activeSheet || busy}
               onMappingChange={handleMappingChange}
               onRuleFile={handleRuleFile}
+              onDownloadRuleExample={downloadRuleExample}
               onResetRulePack={resetRulePack}
             />
             <div className="run-zone">

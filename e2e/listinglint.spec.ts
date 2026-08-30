@@ -82,6 +82,15 @@ test('downloadable sample files drive the complete upload and image inspection f
 
   await page.locator('#table-file').setInputFiles('examples/listinglint-demo.csv')
   await expect(page.getByRole('status')).toContainText('已读取 6 条商品数据')
+
+  const ruleDownloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: '下载规则示例' }).click()
+  expect((await ruleDownloadPromise).suggestedFilename()).toBe('listinglint-rule-pack.example.json')
+  await page.locator('#rule-file').setInputFiles('examples/custom-rule-pack.json')
+  await expect(page.getByText('示例店铺美国站规则', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '恢复通用规则' }).click()
+  await expect(page.getByText('通用跨境商品规则', { exact: true })).toBeVisible()
+
   await page.locator('#image-file').setInputFiles('public/listinglint-demo-images.zip')
   await expect(page.getByRole('status')).toContainText('已读取 4 个图片文件')
 

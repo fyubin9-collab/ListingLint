@@ -11,6 +11,7 @@ interface MappingPanelProps {
   disabled: boolean
   onMappingChange: (field: CanonicalField, header: string) => void
   onRuleFile: (file: File) => void
+  onDownloadRuleExample: () => void
   onResetRulePack: () => void
 }
 
@@ -22,6 +23,7 @@ export function MappingPanel({
   disabled,
   onMappingChange,
   onRuleFile,
+  onDownloadRuleExample,
   onResetRulePack
 }: MappingPanelProps) {
   const required = new Set(getRequiredFields(rulePack))
@@ -77,6 +79,9 @@ export function MappingPanel({
         <div className="rule-actions">
           <label className="text-button" htmlFor="rule-file">导入 JSON</label>
           <input id="rule-file" className="visually-hidden" type="file" accept=".json,application/json" disabled={disabled} onChange={handleRuleFile} />
+          <button type="button" className="text-button text-button--quiet" onClick={onDownloadRuleExample}>
+            下载规则示例
+          </button>
           {rulePack.id !== 'generic-cross-border-v1' && (
             <button type="button" className="text-button text-button--quiet" onClick={onResetRulePack}>
               恢复通用规则
