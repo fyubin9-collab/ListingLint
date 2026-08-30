@@ -72,3 +72,21 @@ test('work template is downloadable, re-uploadable and the app is installable', 
   await expect(page.getByRole('heading', { name: /问题不该藏在\s*第 847 行。/ })).toBeVisible()
   await page.context().setOffline(false)
 })
+
+test('downloadable sample files drive the complete upload and image inspection flow', async ({ page }) => {
+  await page.goto('/')
+
+  const imageDownloadPromise = page.waitForEvent('download')
+  await page.getByRole('link', { name: '下载示例图片 ZIP' }).click()
+  expect((await imageDownloadPromise).suggestedFilename()).toBe('listinglint-demo-images.zip')
+
+  await page.locator('#table-file').setInputFiles('examples/listinglint-demo.csv')
+  await expect(page.getByRole('status')).toContainText('已读取 6 条商品数据')
+  await page.locator('#image-file').setInputFiles('public/listinglint-demo-images.zip')
+  await expect(page.getByRole('status')).toContainText('已读取 4 个图片文件')
+
+  await page.getByRole('button', { name: '运行 ListingLint' }).click()
+  await expect(page.getByRole('heading', { name: '先处理阻止上架的问题' })).toBeVisible()
+  await expect(page.getByRole('table', { name: '质检问题明细' })).toContainText('720×720')
+  await expect(page.getByRole('table', { name: '质检问题明细' })).toContainText('ORPHAN-999')
+})

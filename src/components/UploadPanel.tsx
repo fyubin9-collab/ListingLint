@@ -114,6 +114,13 @@ export function UploadPanel({
         <button type="button" className="text-button text-button--quiet" onClick={onDownloadDemo}>
           下载示例 CSV
         </button>
+        <a
+          className="text-button text-button--quiet"
+          href={`${import.meta.env.BASE_URL}listinglint-demo-images.zip`}
+          download="listinglint-demo-images.zip"
+        >
+          下载示例图片 ZIP
+        </a>
       </div>
     </section>
   )

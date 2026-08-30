@@ -4,6 +4,7 @@ const CORE_ASSETS = [
   './favicon.svg',
   './icon-192.png',
   './icon-512.png',
+  './listinglint-demo-images.zip',
   './listinglint-work-template.xlsx'
 ]
 

@@ -11,6 +11,10 @@ describe('App', () => {
       'href',
       '/listinglint-work-template.xlsx'
     )
+    expect(screen.getByRole('link', { name: '下载示例图片 ZIP' })).toHaveAttribute(
+      'href',
+      '/listinglint-demo-images.zip'
+    )
   })
 
   it('loads the built-in demo, exposes deterministic issues and filters warnings', async () => {
