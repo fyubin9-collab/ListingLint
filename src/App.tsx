@@ -348,7 +348,7 @@ export default function App() {
       </main>
 
       <footer className="site-footer">
-        <span>ListingLint v0.1.0 · MIT License</span>
+        <span>ListingLint v0.1.1 · MIT License</span>
         <span>Deterministic checks, reviewable results.</span>
       </footer>
     </div>

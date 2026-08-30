@@ -4,5 +4,6 @@ coverage/
 playwright-report/
 test-results/
 outputs/
+release-assets/
 *.local
 .DS_Store
