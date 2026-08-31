@@ -15,17 +15,35 @@ test('built-in demo supports filtering, locating and Excel export', async ({ pag
 
   await expect(page.getByRole('heading', { name: '先处理阻止上架的问题' })).toBeVisible()
   await expect(page.getByText('需要修改', { exact: true })).toBeVisible()
-  await expect(page.getByRole('table', { name: '质检问题明细' })).toContainText('BOTTLE-001')
+  const issueList = page.getByRole('region', { name: '质检问题明细' })
+  await expect(issueList).toContainText('BOTTLE-001')
+  await expect(issueList).toContainText('怎么改')
 
-  await page.getByRole('group', { name: '筛选问题级别' }).getByRole('button', { name: /^警告/ }).click()
-  await expect(page.getByRole('table', { name: '质检问题明细' }).getByText('错误')).toHaveCount(0)
+  const warningFilter = page.getByRole('group', { name: '筛选问题级别' }).getByRole('button', { name: /^警告/ })
+  await warningFilter.click()
+  await expect(warningFilter).toHaveAttribute('aria-pressed', 'true')
+  await expect(issueList.getByText('阻止上架', { exact: true })).toHaveCount(0)
   await page.getByPlaceholder('搜索 SKU、行号或问题').fill('BOTTLE-001')
-  await expect(page.getByRole('table', { name: '质检问题明细' })).toContainText('BOTTLE-001')
+  await expect(issueList).toContainText('BOTTLE-001')
 
-  await page.getByRole('button', { name: '全部' }).click()
+  await page.getByRole('button', { name: /^全部/ }).click()
   await page.getByPlaceholder('搜索 SKU、行号或问题').fill('')
-  await page.getByRole('button', { name: '定位' }).first().click()
-  await expect(page.locator('.sheet-table tbody tr.is-selected')).toHaveCount(1)
+  await page.getByRole('button', { name: /定位到第/ }).first().click()
+  const reviewPanel = page.getByRole('region', { name: '当前定位问题' })
+  await expect(reviewPanel).toBeVisible()
+  await expect(reviewPanel).toContainText('发现的问题')
+  await expect(reviewPanel).toContainText('建议修改')
+  const selectedRow = page.locator('.sheet-table tbody tr[aria-selected="true"]')
+  await expect(selectedRow).toHaveCount(1)
+  await expect(reviewPanel).toBeFocused()
+  await expect.poll(() => selectedRow.evaluate((row) => {
+    const bounds = row.getBoundingClientRect()
+    return bounds.top >= 0 && bounds.bottom <= window.innerHeight
+  })).toBe(true)
+
+  if ((page.viewportSize()?.width ?? 1000) <= 620) {
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  }
 
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: /导出 Excel 报告/ }).click()
@@ -39,6 +57,23 @@ test('initial screen has no automatically detectable accessibility violations', 
   await page.evaluate(async () => { await document.fonts.ready })
   const results = await new AxeBuilder({ page }).analyze()
   expect(results.violations).toEqual([])
+})
+
+test('results and issue-review states have no automatically detectable accessibility violations', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: '直接体验有问题的示例' }).click()
+  await page.getByRole('button', { name: /定位到第/ }).first().click()
+  const results = await new AxeBuilder({ page }).analyze()
+  expect(results.violations).toEqual([])
+})
+
+test('required mappings block inspection until fixed', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: '直接体验有问题的示例' }).click()
+  await page.getByRole('button', { name: '检查或修改' }).click()
+  await page.getByRole('combobox', { name: '品牌（Brand） 对应源表列' }).selectOption('')
+  await expect(page.getByRole('button', { name: '运行 ListingLint' })).toBeDisabled()
+  await expect(page.getByRole('alert')).toContainText('还不能运行：请映射品牌。')
 })
 
 test('work template is downloadable, re-uploadable and the app is installable', async ({ page }) => {
@@ -96,6 +131,6 @@ test('downloadable sample files drive the complete upload and image inspection f
 
   await page.getByRole('button', { name: '运行 ListingLint' }).click()
   await expect(page.getByRole('heading', { name: '先处理阻止上架的问题' })).toBeVisible()
-  await expect(page.getByRole('table', { name: '质检问题明细' })).toContainText('720×720')
-  await expect(page.getByRole('table', { name: '质检问题明细' })).toContainText('ORPHAN-999')
+  await expect(page.getByRole('region', { name: '质检问题明细' })).toContainText('720×720')
+  await expect(page.getByRole('region', { name: '质检问题明细' })).toContainText('ORPHAN-999')
 })

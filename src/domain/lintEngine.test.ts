@@ -79,8 +79,21 @@ describe('lint engine', () => {
       rulePack: genericRulePack,
       images: null
     })
-    expect(issues.filter((issue) => issue.code === 'MISSING_COLUMN' && issue.field === 'brand')).toHaveLength(1)
+    const missingBrand = issues.find((issue) => issue.code === 'MISSING_COLUMN' && issue.field === 'brand')
+    expect(missingBrand?.message).toBe('必填字段“品牌”尚未映射。')
     expect(issues.filter((issue) => issue.code === 'IMAGE_CHECK_SKIPPED')).toHaveLength(1)
+  })
+
+  it('uses business-facing Chinese field names in issue explanations', () => {
+    const issues = runLint({
+      products: [product({ brand: null, stock: -1 })],
+      mapping,
+      rulePack: genericRulePack,
+      images: [image()]
+    })
+
+    expect(issues.find((issue) => issue.field === 'brand')?.message).toBe('品牌不能为空。')
+    expect(issues.find((issue) => issue.field === 'stock')?.message).toBe('库存不能小于 0。')
   })
 
   it('supports enum rules and identifies orphan or duplicate images', () => {

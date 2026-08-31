@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
 import type { ColumnMapping, LintIssue, ParsedSheet } from '../domain/types'
+import { getIssueKey } from '../domain/issues'
 
 interface DataPreviewProps {
   sheet: ParsedSheet | null
   mapping: ColumnMapping
   issues: LintIssue[] | null
   selectedRow: number | null
+  selectedIssue: LintIssue | null
   scanning: boolean
   onClearSelection: () => void
 }
@@ -17,7 +19,7 @@ function displayValue(value: unknown): string {
   return String(value)
 }
 
-export function DataPreview({ sheet, mapping, issues, selectedRow, scanning, onClearSelection }: DataPreviewProps) {
+export function DataPreview({ sheet, mapping, issues, selectedRow, selectedIssue, scanning, onClearSelection }: DataPreviewProps) {
   const [page, setPage] = useState(0)
   const pageCount = sheet ? Math.max(1, Math.ceil(sheet.rows.length / PAGE_SIZE)) : 1
   const selectedIndex = sheet && selectedRow !== null
@@ -58,9 +60,10 @@ export function DataPreview({ sheet, mapping, issues, selectedRow, scanning, onC
   }
 
   return (
-    <div className="sheet-table-wrap" id="data-preview">
+    <div className="sheet-table-wrap" id="data-preview" tabIndex={0} aria-label="可横向滚动的商品数据预览">
       {scanning && <div className="scan-line" aria-hidden="true" />}
-      <table className="sheet-table">
+      <table className="sheet-table" aria-label="商品数据预览">
+        <caption className="visually-hidden">商品数据预览；有问题的行和单元格会显示错误或警告状态。</caption>
         <thead>
           <tr>
             <th className="row-number-cell">行</th>
@@ -76,13 +79,19 @@ export function DataPreview({ sheet, mapping, issues, selectedRow, scanning, onC
             const hasError = currentIssues.some((issue) => issue.severity === 'error')
             const hasWarning = currentIssues.some((issue) => issue.severity === 'warning')
             return (
-              <tr key={row.sourceRow} className={selectedRow === row.sourceRow ? 'is-selected' : undefined}>
+              <tr
+                id={`data-row-${row.sourceRow}`}
+                key={row.sourceRow}
+                className={selectedRow === row.sourceRow ? 'is-selected' : undefined}
+                aria-selected={selectedRow === row.sourceRow || undefined}
+              >
                 <th className="row-number-cell" scope="row">{row.sourceRow}</th>
                 <td className="row-status-cell">
                   {currentIssues.length > 0 ? (
                     <span
                       className={`row-status-dot ${hasError ? 'row-status-dot--error' : 'row-status-dot--warning'}`}
                       title={`${currentIssues.length} 个问题${hasWarning && hasError ? '，含警告' : ''}`}
+                      aria-label={`本行有 ${currentIssues.length} 个问题${hasWarning && hasError ? '，包含错误和警告' : hasError ? '，包含错误' : '，包含警告'}`}
                     >
                       {currentIssues.length}
                     </span>
@@ -96,8 +105,19 @@ export function DataPreview({ sheet, mapping, issues, selectedRow, scanning, onC
                     : cellIssues.length > 0
                       ? 'cell--warning'
                       : ''
+                  const isSelectedCell = selectedIssue
+                    ? selectedIssue.sourceRow === row.sourceRow && cellIssues.some((issue) => getIssueKey(issue) === getIssueKey(selectedIssue))
+                    : false
                   return (
-                    <td className={cellState} key={header} title={cellIssues.map((issue) => issue.message).join('\n')}>
+                    <td
+                      className={`${cellState} ${isSelectedCell ? 'cell--selected' : ''}`.trim() || undefined}
+                      key={header}
+                      title={cellIssues.map((issue) => issue.message).join('\n')}
+                      aria-describedby={isSelectedCell ? 'issue-review-panel' : undefined}
+                      aria-label={cellIssues.length > 0
+                        ? `${displayValue(row.values[header])}；${cellIssues.map((issue) => issue.message).join('；')}`
+                        : undefined}
+                    >
                       {displayValue(row.values[header])}
                     </td>
                   )

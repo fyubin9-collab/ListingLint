@@ -7,9 +7,10 @@ import { WorkflowRail } from './components/WorkflowRail'
 import customRulePackExample from '../examples/custom-rule-pack.json'
 import { demoCsv, demoImages, demoWorkbook } from './data/demo'
 import { genericRulePack } from './data/genericRulePack'
+import { getIssueKey } from './domain/issues'
 import { runLint } from './domain/lintEngine'
-import { getDuplicateMappedHeaders, mapProducts, suggestMapping } from './domain/mapping'
-import { parseRulePack } from './domain/rulePack'
+import { FIELD_NAMES, getDuplicateMappedHeaders, mapProducts, suggestMapping } from './domain/mapping'
+import { getRequiredFields, parseRulePack } from './domain/rulePack'
 import type {
   CanonicalField,
   ColumnMapping,
@@ -30,6 +31,12 @@ function waitForScanFrame(): Promise<void> {
   })
 }
 
+function preferredScrollBehavior(): ScrollBehavior {
+  return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ? 'auto'
+    : 'smooth'
+}
+
 export default function App() {
   const [workbook, setWorkbook] = useState<ParsedWorkbook | null>(null)
   const [activeSheetIndex, setActiveSheetIndex] = useState(0)
@@ -40,6 +47,7 @@ export default function App() {
   const [imageProgress, setImageProgress] = useState<number | null>(null)
   const [issues, setIssues] = useState<LintIssue[] | null>(null)
   const [selectedRow, setSelectedRow] = useState<number | null>(null)
+  const [selectedIssue, setSelectedIssue] = useState<LintIssue | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
   const [parsing, setParsing] = useState(false)
   const [scanning, setScanning] = useState(false)
@@ -51,12 +59,24 @@ export default function App() {
     [activeSheet, mapping]
   )
   const duplicateMappedHeaders = useMemo(() => getDuplicateMappedHeaders(mapping), [mapping])
+  const missingRequiredFields = useMemo(
+    () => getRequiredFields(rulePack).filter((field) => !mapping[field]),
+    [mapping, rulePack]
+  )
+  const locatableIssues = useMemo(
+    () => issues?.filter((issue) => issue.sourceRow !== null) ?? [],
+    [issues]
+  )
+  const selectedIssueIndex = selectedIssue
+    ? locatableIssues.findIndex((issue) => getIssueKey(issue) === getIssueKey(selectedIssue))
+    : -1
   const busy = parsing || scanning || imageProgress !== null || exporting
   const stage: 1 | 2 | 3 = issues !== null ? 3 : workbook ? 2 : 1
 
   const clearResult = () => {
     setIssues(null)
     setSelectedRow(null)
+    setSelectedIssue(null)
   }
 
   const handleTableFile = async (file: File) => {
@@ -155,8 +175,17 @@ export default function App() {
       setNotice({ tone: 'error', text: '存在重复字段映射，请先修正后再质检。' })
       return
     }
+    if (missingRequiredFields.length > 0) {
+      setNotice({
+        tone: 'error',
+        text: `还不能运行：请先映射${missingRequiredFields.map((field) => FIELD_NAMES[field]).join('、')}。`
+      })
+      return
+    }
 
     setScanning(true)
+    setSelectedRow(null)
+    setSelectedIssue(null)
     setNotice({ tone: 'info', text: '正在按当前映射和规则逐行检查…' })
     await waitForScanFrame()
     const nextProducts = mapProducts(activeSheet, mapping)
@@ -184,6 +213,7 @@ export default function App() {
     setImageFileName('listinglint-demo-images.zip')
     setIssues(demoIssues)
     setSelectedRow(null)
+    setSelectedIssue(null)
     setNotice({ tone: 'success', text: '演示数据已装入；表格中的标记与下方报告一一对应。' })
   }
 
@@ -229,9 +259,37 @@ export default function App() {
     }
   }
 
-  const locateIssue = (sourceRow: number) => {
-    setSelectedRow(sourceRow)
-    document.getElementById('data-preview')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  const focusIssue = (issue: LintIssue) => {
+    if (issue.sourceRow === null) return
+    setSelectedIssue(issue)
+    setSelectedRow(issue.sourceRow)
+    requestAnimationFrame(() => {
+      const reviewPanel = document.getElementById('issue-review-panel')
+      document.getElementById(`data-row-${issue.sourceRow}`)?.scrollIntoView({
+        behavior: preferredScrollBehavior(),
+        block: 'center'
+      })
+      reviewPanel?.focus({ preventScroll: true })
+    })
+  }
+
+  const moveSelectedIssue = (offset: number) => {
+    const nextIssue = locatableIssues[selectedIssueIndex + offset]
+    if (nextIssue) focusIssue(nextIssue)
+  }
+
+  const clearIssueSelection = () => {
+    setSelectedRow(null)
+    setSelectedIssue(null)
+  }
+
+  const returnToResults = () => {
+    clearIssueSelection()
+    requestAnimationFrame(() => {
+      const resultsHeading = document.getElementById('results-heading')
+      resultsHeading?.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' })
+      resultsHeading?.focus({ preventScroll: true })
+    })
   }
 
   return (
@@ -302,11 +360,25 @@ export default function App() {
               onResetRulePack={resetRulePack}
             />
             <div className="run-zone">
-              <button type="button" className="run-button" disabled={!activeSheet || busy || duplicateMappedHeaders.length > 0} onClick={runInspection}>
+              <button
+                type="button"
+                className="run-button"
+                disabled={!activeSheet || busy || duplicateMappedHeaders.length > 0 || missingRequiredFields.length > 0}
+                onClick={runInspection}
+              >
                 <span>{scanning ? '正在逐行质检…' : '运行 ListingLint'}</span>
                 <span aria-hidden="true">→</span>
               </button>
-              <small>只生成问题报告，不会改动你的源文件。</small>
+              {activeSheet && (duplicateMappedHeaders.length > 0 || missingRequiredFields.length > 0) ? (
+                <p className="run-blocker" role="alert">
+                  还不能运行：
+                  {missingRequiredFields.length > 0 && `请映射${missingRequiredFields.map((field) => FIELD_NAMES[field]).join('、')}`}
+                  {missingRequiredFields.length > 0 && duplicateMappedHeaders.length > 0 && '；'}
+                  {duplicateMappedHeaders.length > 0 && '请修正重复映射'}。
+                </p>
+              ) : (
+                <small>只生成问题报告，不会改动你的源文件。</small>
+              )}
             </div>
           </aside>
 
@@ -322,13 +394,45 @@ export default function App() {
                 <span><i className="legend-dot legend-dot--warning" />警告</span>
               </div>
             </div>
+            {selectedIssue && selectedIssue.sourceRow !== null && (
+              <div
+                id="issue-review-panel"
+                className={`issue-review-panel issue-review-panel--${selectedIssue.severity}`}
+                role="region"
+                aria-label="当前定位问题"
+                aria-live="polite"
+                tabIndex={-1}
+              >
+                <div className="issue-review-panel__topline">
+                  <span>{selectedIssue.severity === 'error' ? '阻止上架' : '需要人工复核'}</span>
+                  <span>第 {selectedIssue.sourceRow} 行 · {selectedIssue.sku || '未填写 SKU'}</span>
+                  <span>{selectedIssueIndex + 1} / {locatableIssues.length}</span>
+                </div>
+                <div className="issue-review-panel__content">
+                  <div>
+                    <span className="issue-review-panel__label">发现的问题</span>
+                    <strong>{selectedIssue.message}</strong>
+                  </div>
+                  <div>
+                    <span className="issue-review-panel__label">建议修改</span>
+                    <p>{selectedIssue.suggestion}</p>
+                  </div>
+                </div>
+                <div className="issue-review-panel__actions">
+                  <button type="button" disabled={selectedIssueIndex <= 0} onClick={() => moveSelectedIssue(-1)}>← 上一问题</button>
+                  <button type="button" disabled={selectedIssueIndex >= locatableIssues.length - 1} onClick={() => moveSelectedIssue(1)}>下一问题 →</button>
+                  <button type="button" onClick={returnToResults}>回到问题清单</button>
+                </div>
+              </div>
+            )}
             <DataPreview
               sheet={activeSheet}
               mapping={mapping}
               issues={issues}
               selectedRow={selectedRow}
+              selectedIssue={selectedIssue}
               scanning={scanning}
-              onClearSelection={() => setSelectedRow(null)}
+              onClearSelection={clearIssueSelection}
             />
           </section>
         </div>
@@ -337,7 +441,8 @@ export default function App() {
           <ResultsPanel
             issues={issues}
             productCount={products.length}
-            onLocate={locateIssue}
+            selectedIssue={selectedIssue}
+            onLocate={focusIssue}
             onExport={exportReport}
             exporting={exporting}
           />
@@ -353,7 +458,7 @@ export default function App() {
       </main>
 
       <footer className="site-footer">
-        <span>ListingLint v0.1.2 · MIT License</span>
+        <span>ListingLint v0.1.3 · MIT License</span>
         <span>确定性规则 · 结果可复核</span>
       </footer>
     </div>

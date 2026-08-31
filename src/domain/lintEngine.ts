@@ -7,6 +7,7 @@ import type {
   LintRule,
   RulePack
 } from './types'
+import { FIELD_NAMES } from './mapping'
 
 export interface LintInput {
   products: CanonicalProduct[]
@@ -45,46 +46,47 @@ function baseIssue(
 
 function issueForValueRule(rule: Exclude<LintRule, { type: 'image' | 'forbiddenTerms' }>, product: CanonicalProduct): LintIssue | null {
   const value = product[rule.field]
+  const fieldName = FIELD_NAMES[rule.field]
   if (rule.type !== 'required' && isEmpty(value)) return null
 
   if (rule.type === 'required' && isEmpty(value)) {
-    return baseIssue(rule, product, rule.field, 'REQUIRED', `${rule.field} 不能为空。`, '补充该字段后再上架。')
+    return baseIssue(rule, product, rule.field, 'REQUIRED', `${fieldName}不能为空。`, `补充${fieldName}后再上架。`)
   }
   if (rule.type === 'length') {
     const length = Array.from(stringValue(value)).length
     if (rule.min !== undefined && length < rule.min) {
-      return baseIssue(rule, product, rule.field, 'TOO_SHORT', `${rule.field} 长度为 ${length}，不能少于 ${rule.min}。`, `补充内容至至少 ${rule.min} 个字符。`)
+      return baseIssue(rule, product, rule.field, 'TOO_SHORT', `${fieldName}当前为 ${length} 个字符，不能少于 ${rule.min} 个。`, `将${fieldName}补充至至少 ${rule.min} 个字符。`)
     }
     if (rule.max !== undefined && length > rule.max) {
-      return baseIssue(rule, product, rule.field, 'TOO_LONG', `${rule.field} 长度为 ${length}，不能超过 ${rule.max}。`, `精简内容至 ${rule.max} 个字符以内。`)
+      return baseIssue(rule, product, rule.field, 'TOO_LONG', `${fieldName}当前为 ${length} 个字符，不能超过 ${rule.max} 个。`, `将${fieldName}精简至 ${rule.max} 个字符以内。`)
     }
   }
   if (rule.type === 'number') {
     const numeric = typeof value === 'number' ? value : Number(stringValue(value))
     if (!Number.isFinite(numeric)) {
-      return baseIssue(rule, product, rule.field, 'NOT_NUMBER', `${rule.field} 必须是数字。`, '改为不带货币符号或千位分隔符的数字。')
+      return baseIssue(rule, product, rule.field, 'NOT_NUMBER', `${fieldName}必须是数字。`, '改为不带货币符号或千位分隔符的数字。')
     }
     if (rule.integer && !Number.isInteger(numeric)) {
-      return baseIssue(rule, product, rule.field, 'NOT_INTEGER', `${rule.field} 必须是整数。`, '改为整数。')
+      return baseIssue(rule, product, rule.field, 'NOT_INTEGER', `${fieldName}必须是整数。`, '改为不含小数的整数。')
     }
     if (rule.min !== undefined && numeric < rule.min) {
-      return baseIssue(rule, product, rule.field, 'NUMBER_TOO_SMALL', `${rule.field} 不能小于 ${rule.min}。`, `将数值调整为 ${rule.min} 或更大。`)
+      return baseIssue(rule, product, rule.field, 'NUMBER_TOO_SMALL', `${fieldName}不能小于 ${rule.min}。`, `将${fieldName}调整为 ${rule.min} 或更大。`)
     }
     if (rule.max !== undefined && numeric > rule.max) {
-      return baseIssue(rule, product, rule.field, 'NUMBER_TOO_LARGE', `${rule.field} 不能大于 ${rule.max}。`, `将数值调整为 ${rule.max} 或更小。`)
+      return baseIssue(rule, product, rule.field, 'NUMBER_TOO_LARGE', `${fieldName}不能大于 ${rule.max}。`, `将${fieldName}调整为 ${rule.max} 或更小。`)
     }
   }
   if (rule.type === 'pattern') {
     const regexp = new RegExp(rule.pattern, rule.flags)
     if (!regexp.test(stringValue(value))) {
-      return baseIssue(rule, product, rule.field, 'PATTERN_MISMATCH', `${rule.field} 不符合格式要求。`, '按规则要求修正字段格式。')
+      return baseIssue(rule, product, rule.field, 'PATTERN_MISMATCH', `${fieldName}不符合格式要求。`, `按规则要求修正${fieldName}格式。`)
     }
   }
   if (rule.type === 'enum') {
     const comparable = rule.caseSensitive ? stringValue(value) : stringValue(value).toLocaleLowerCase()
     const allowed = rule.caseSensitive ? rule.values : rule.values.map((item) => item.toLocaleLowerCase())
     if (!allowed.includes(comparable)) {
-      return baseIssue(rule, product, rule.field, 'NOT_ALLOWED', `${rule.field} 不在允许值列表中。`, `改为以下值之一：${rule.values.join('、')}。`)
+      return baseIssue(rule, product, rule.field, 'NOT_ALLOWED', `${fieldName}不在允许值列表中。`, `改为以下值之一：${rule.values.join('、')}。`)
     }
   }
   return null
@@ -102,7 +104,7 @@ function runUniqueRule(rule: Extract<LintRule, { type: 'unique' }>, products: Ca
     .filter((group) => group.length > 1)
     .flatMap((group) =>
       group.map((product) =>
-        baseIssue(rule, product, rule.field, 'DUPLICATE', `${rule.field}“${stringValue(product[rule.field])}”重复出现。`, '确保每个商品使用唯一 SKU。')
+        baseIssue(rule, product, rule.field, 'DUPLICATE', `${FIELD_NAMES[rule.field]}“${stringValue(product[rule.field])}”重复出现。`, '确保每个商品使用唯一 SKU。')
       )
     )
 }
@@ -122,7 +124,7 @@ function runForbiddenTermsRule(
       )
       if (term) {
         issues.push(
-          baseIssue(rule, product, field, 'FORBIDDEN_TERM', `${field} 包含需复核词语“${term}”。`, `删除“${term}”或按目标平台规则确认是否允许。`)
+          baseIssue(rule, product, field, 'FORBIDDEN_TERM', `${FIELD_NAMES[field]}包含需复核词语“${term}”。`, `删除“${term}”或按目标平台规则确认是否允许。`)
         )
       }
     })
@@ -240,8 +242,8 @@ export function runLint({ products, mapping, rulePack, images }: LintInput): Lin
         ruleId: rule.id,
         severity: rule.severity,
         code: 'MISSING_COLUMN',
-        message: `没有映射标准字段“${rule.field}”。`,
-        suggestion: '返回字段映射，为该标准字段选择源表列。',
+        message: `必填字段“${FIELD_NAMES[rule.field]}”尚未映射。`,
+        suggestion: `返回字段映射，为${FIELD_NAMES[rule.field]}选择对应的源表列。`,
         sku: '',
         sourceRow: null,
         field: rule.field

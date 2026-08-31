@@ -17,6 +17,16 @@ export const FIELD_LABELS: Record<CanonicalField, string> = {
   category: '类目（Category）'
 }
 
+export const FIELD_NAMES: Record<CanonicalField, string> = {
+  sku: 'SKU',
+  title: '商品标题',
+  price: '价格',
+  currency: '币种',
+  stock: '库存',
+  brand: '品牌',
+  category: '类目'
+}
+
 function normalizeHeader(value: string): string {
   return value
     .normalize('NFKC')
