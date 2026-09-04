@@ -103,7 +103,7 @@ export function ResultsPanel({
 
   return (
     <section className="results-panel" aria-labelledby="results-heading">
-      <div className="results-heading-row">
+      <div id="tour-export" className="results-heading-row">
         <div>
           <div className="section-kicker">03 / 质检结果</div>
           <h2 id="results-heading" tabIndex={-1}>{errors > 0 ? '先处理阻止上架的问题' : '这批商品可以进入人工复核'}</h2>
@@ -124,7 +124,7 @@ export function ResultsPanel({
         <span>已检查 <strong>{productCount}</strong></span>
       </div>
 
-      <div className="result-tools">
+      <div id="tour-filters" className="result-tools">
         <div className="filter-tabs" role="group" aria-label="筛选问题级别">
           {([
             ['all', '全部', issues.length],
@@ -165,7 +165,7 @@ export function ResultsPanel({
           <span>{issues.length === 0 ? '仍建议按目标平台要求完成人工复核。' : '清除筛选或更换关键词。'}</span>
         </div>
       ) : (
-        <section className="issue-groups" aria-label="质检问题明细">
+        <section id="tour-results" className="issue-groups" aria-label="质检问题明细">
           <div className="issue-groups__intro">
             <strong>{visibleGroups.length} 个待复核对象</strong>
             <span>已按 SKU 和源表行合并，共 {visibleIssues.length} 条问题</span>

@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState, type MouseEvent } from 'react'
 import { DataPreview } from './components/DataPreview'
+import { FeatureTour, type FeatureTourStep } from './components/FeatureTour'
 import { MappingPanel } from './components/MappingPanel'
 import { ResultsPanel } from './components/ResultsPanel'
 import { UploadPanel } from './components/UploadPanel'
@@ -25,6 +26,57 @@ interface Notice {
   text: string
 }
 
+const FEATURE_TOUR_STEPS: FeatureTourStep[] = [
+  {
+    id: 'files',
+    targetId: 'tour-files',
+    title: '准备商品资料',
+    description: '先放入 CSV 或 XLSX 商品表；如果还要检查图片，再加入按 SKU 命名的 ZIP。引导已经替你装入一套有问题的示例。'
+  },
+  {
+    id: 'mapping',
+    targetId: 'tour-mapping',
+    title: '确认字段对应关系',
+    description: '确认源表里的“售价”“库存”等列分别代表什么。必填字段没有对应好时，系统会明确提示并阻止误运行；这里也能换成自己的规则。'
+  },
+  {
+    id: 'run',
+    targetId: 'tour-run',
+    title: '运行上架前质检',
+    description: '确认资料和字段后运行质检。它按照固定规则逐行检查，同一份资料每次都会得到相同结果。'
+  },
+  {
+    id: 'preview',
+    targetId: 'tour-preview',
+    title: '从原表查看问题位置',
+    description: '红色代表阻止上架的问题，黄色代表需要人工确认。每个标记都保留源表行号，不需要在几百行数据里反复寻找。'
+  },
+  {
+    id: 'results',
+    targetId: 'tour-results',
+    title: '按商品整理问题',
+    description: '问题会按 SKU 和源表行合并。先处理“阻止上架”，再复核警告，可以减少同一个商品被拆成很多零散记录。'
+  },
+  {
+    id: 'locate',
+    targetId: 'issue-review-panel',
+    title: '定位错误并查看改法',
+    description: '点击“定位到第几行”后，上方会持续显示具体原因和修改建议；还可以直接切换上一条、下一条问题。'
+  },
+  {
+    id: 'filters',
+    targetId: 'tour-filters',
+    title: '筛选和搜索问题',
+    description: '可以只看错误或警告，也能按 SKU、行号和问题关键词搜索，快速缩小需要处理的范围。'
+  },
+  {
+    id: 'export',
+    targetId: 'tour-export',
+    title: '导出复核报告',
+    description: '处理前先导出 Excel 报告。报告包含整体情况、问题明细、字段对应关系和所用规则，方便交接与复核。'
+  }
+]
+
 function waitForScanFrame(): Promise<void> {
   return new Promise((resolve) => {
     requestAnimationFrame(() => window.setTimeout(resolve, 260))
@@ -38,6 +90,8 @@ function preferredScrollBehavior(): ScrollBehavior {
 }
 
 export default function App() {
+  const tourTriggerRef = useRef<HTMLButtonElement>(null)
+  const lastTourTriggerRef = useRef<HTMLButtonElement | null>(null)
   const [workbook, setWorkbook] = useState<ParsedWorkbook | null>(null)
   const [activeSheetIndex, setActiveSheetIndex] = useState(0)
   const [mapping, setMapping] = useState<ColumnMapping>({})
@@ -52,6 +106,7 @@ export default function App() {
   const [parsing, setParsing] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [tourStep, setTourStep] = useState<number | null>(null)
 
   const activeSheet = workbook?.sheets[activeSheetIndex] ?? null
   const products = useMemo(
@@ -217,6 +272,30 @@ export default function App() {
     setNotice({ tone: 'success', text: '演示数据已装入；表格中的标记与下方报告一一对应。' })
   }
 
+  const startFeatureTour = (event?: MouseEvent<HTMLButtonElement>) => {
+    lastTourTriggerRef.current = event?.currentTarget ?? tourTriggerRef.current
+    loadDemo()
+    setTourStep(0)
+    setNotice({ tone: 'info', text: '功能导览已准备好演示数据；跟随步骤了解一次完整质检。' })
+  }
+
+  const changeFeatureTourStep = (nextStep: number) => {
+    const boundedStep = Math.min(Math.max(nextStep, 0), FEATURE_TOUR_STEPS.length - 1)
+    if (FEATURE_TOUR_STEPS[boundedStep].id === 'locate') {
+      const firstIssue = locatableIssues[0]
+      if (firstIssue) {
+        setSelectedIssue(firstIssue)
+        setSelectedRow(firstIssue.sourceRow)
+      }
+    }
+    setTourStep(boundedStep)
+  }
+
+  const closeFeatureTour = () => {
+    setTourStep(null)
+    requestAnimationFrame(() => lastTourTriggerRef.current?.focus())
+  }
+
   const downloadDemo = () => {
     const blob = new Blob([`\uFEFF${demoCsv}`], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
@@ -302,9 +381,23 @@ export default function App() {
             <small>电商商品上架质检</small>
           </span>
         </a>
-        <div className="local-badge">
-          <span aria-hidden="true" />
-          浏览器本地处理
+        <div className="header-actions">
+          <button
+            ref={tourTriggerRef}
+            type="button"
+            className="tour-launch"
+            aria-haspopup="dialog"
+            disabled={busy}
+            onClick={startFeatureTour}
+          >
+            <span aria-hidden="true" className="tour-launch__mark" />
+            <span>新手导览</span>
+            <small>先看这里 →</small>
+          </button>
+          <div className="local-badge">
+            <span className="local-badge__dot" aria-hidden="true" />
+            <span className="local-badge__label">浏览器本地处理</span>
+          </div>
         </div>
       </header>
 
@@ -316,6 +409,23 @@ export default function App() {
           </div>
           <div className="hero-copy">
             <p>选择本地商品表和图片包，检查字段、SKU、价格、库存与图片规格，并生成可定位的问题报告。</p>
+            <button
+              type="button"
+              className="tour-spotlight"
+              aria-label="开始功能导览"
+              disabled={busy}
+              onClick={startFeatureTour}
+            >
+              <span className="tour-spotlight__copy">
+                <small>第一次使用？</small>
+                <strong>跟着示例走一遍完整质检</strong>
+                <span>约 2 分钟 · 8 个步骤 · 不需要准备文件</span>
+              </span>
+              <span className="tour-spotlight__action" aria-hidden="true">
+                开始
+                <b>→</b>
+              </span>
+            </button>
             <ul className="privacy-line" aria-label="数据处理说明">
               <li>仅在浏览器处理</li>
               <li>不修改源表</li>
@@ -359,7 +469,7 @@ export default function App() {
               onDownloadRuleExample={downloadRuleExample}
               onResetRulePack={resetRulePack}
             />
-            <div className="run-zone">
+            <div id="tour-run" className="run-zone">
               <button
                 type="button"
                 className="run-button"
@@ -382,7 +492,7 @@ export default function App() {
             </div>
           </aside>
 
-          <section className="inspection-sheet" aria-label="商品表格预览">
+          <section id="tour-preview" className="inspection-sheet" aria-label="商品表格预览">
             <div className="sheet-toolbar">
               <div>
                 <span className="sheet-status-light" aria-hidden="true" />
@@ -458,9 +568,18 @@ export default function App() {
       </main>
 
       <footer className="site-footer">
-        <span>ListingLint v0.1.3 · MIT License</span>
+        <span>ListingLint v0.1.4 · MIT License</span>
         <span>确定性规则 · 结果可复核</span>
       </footer>
+
+      {tourStep !== null && (
+        <FeatureTour
+          steps={FEATURE_TOUR_STEPS}
+          activeIndex={tourStep}
+          onStepChange={changeFeatureTourStep}
+          onClose={closeFeatureTour}
+        />
+      )}
     </div>
   )
 }

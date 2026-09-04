@@ -59,6 +59,45 @@ test('initial screen has no automatically detectable accessibility violations', 
   expect(results.violations).toEqual([])
 })
 
+test('feature tour demonstrates the complete inspection workflow', async ({ page }) => {
+  await page.goto('/')
+  const launchButton = page.getByRole('button', { name: '开始功能导览' })
+  await expect(launchButton).toBeVisible()
+  await expect.poll(async () => (await launchButton.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(90)
+  await launchButton.click()
+
+  const tour = page.getByRole('dialog')
+  await expect(tour).toContainText('准备商品资料')
+  await expect(page.getByText('listinglint-demo.csv').first()).toBeVisible()
+  await expect(page.locator('#tour-files')).toHaveClass(/tour-target--active/)
+  await expect.poll(() => tour.evaluate((element) => {
+    const bounds = element.getBoundingClientRect()
+    return bounds.left >= 0 && bounds.top >= 0 && bounds.right <= window.innerWidth && bounds.bottom <= window.innerHeight
+  })).toBe(true)
+
+  if ((page.viewportSize()?.width ?? 1000) <= 620) {
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  }
+
+  await tour.getByRole('button', { name: '转到第 6 步：定位错误并查看改法' }).click()
+  await expect(tour).toContainText('定位错误并查看改法')
+  await expect(page.getByRole('region', { name: '当前定位问题' })).toBeVisible()
+  await expect(page.locator('.sheet-table tbody tr[aria-selected="true"]')).toHaveCount(1)
+
+  await tour.getByRole('button', { name: '转到第 8 步：导出复核报告' }).click()
+  await expect(page.locator('#tour-export')).toHaveClass(/tour-target--active/)
+  await tour.getByRole('button', { name: '完成导览' }).click()
+  await expect(tour).toBeHidden()
+  await expect(launchButton).toBeFocused()
+})
+
+test('feature tour has no automatically detectable accessibility violations', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: '开始功能导览' }).click()
+  const results = await new AxeBuilder({ page }).analyze()
+  expect(results.violations).toEqual([])
+})
+
 test('results and issue-review states have no automatically detectable accessibility violations', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: '直接体验有问题的示例' }).click()

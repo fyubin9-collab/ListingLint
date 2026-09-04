@@ -26,7 +26,7 @@ export function UploadPanel({
   onDownloadDemo
 }: UploadPanelProps) {
   return (
-    <section className="control-section" aria-labelledby="source-heading">
+    <section id="tour-files" className="control-section" aria-labelledby="source-heading">
       <div className="section-kicker">01 / 商品资料</div>
       <h2 id="source-heading">选择待检查文件</h2>
       <p className="section-copy">商品表必选；按 SKU 命名的图片 ZIP 可选。</p>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'listinglint-shell-v3'
+const CACHE_NAME = 'listinglint-shell-v4'
 const CORE_ASSETS = [
   './manifest.webmanifest',
   './favicon.svg',
